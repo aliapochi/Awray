@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.loeth.awray"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.loeth.awray"
