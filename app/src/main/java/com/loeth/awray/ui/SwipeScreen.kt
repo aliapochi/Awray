@@ -44,6 +44,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.loeth.awray.swipecards.Direction
 import com.loeth.awray.swipecards.MatchProfile
@@ -53,9 +54,9 @@ import com.loeth.awray.swipecards.swipableCard
 import kotlinx.coroutines.launch
 
 @Composable
-fun SwipeCards() {
+fun SwipeCards(navController: NavController) {
     TransparentSystemBars()
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -68,7 +69,7 @@ fun SwipeCards() {
             )
 //                        .systemBarsPadding()
     ) {
-        Box {
+        Box(modifier = Modifier.weight(1f)) {
             val states = profiles.reversed()
                 .map { it to rememberSwipeableCardState() }
             var hint by remember {
@@ -146,6 +147,10 @@ fun SwipeCards() {
                 )
             }
         }
+        BottomNavigationMenu(
+            selectedItem = BottomNavigationItem.SWIPE,
+            navController = navController
+        )
     }
 }
 

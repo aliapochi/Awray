@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "810627898678",
+    "project_id": "my-awray-project-id",
+    "storage_bucket": "my-awray-project-id.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:810627898678:android:a86a310d6db4ef6d2ca797",
+        "android_client_info": {
+          "package_name": "com.loeth.awray"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbJMR7_WBCK4Y6RtwJDJJYvWGCAYHWiic"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
