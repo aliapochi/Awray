@@ -19,23 +19,28 @@ import com.loeth.awray.DestinationScreen
 import com.loeth.awray.R
 import com.loeth.awray.navigateTo
 
-enum class BottomNavigationItem(val icon: Int, val navDestination: DestinationScreen){
+enum class BottomNavigationItem(val icon: Int, val navDestination: DestinationScreen) {
     SWIPE(R.drawable.baseline_swipe, DestinationScreen.Swipe),
     CHATLIST(R.drawable.baseline_chat, DestinationScreen.ChatList),
     PROFILE(R.drawable.baseline_person, DestinationScreen.Profile)
 }
 
 @Composable
-fun BottomNavigationMenu(selectedItem: BottomNavigationItem, navController: NavController){
+fun BottomNavigationMenu(
+    selectedItem: BottomNavigationItem,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .padding(top = 4.dp)
             .background(Color.White)
-    ){
-        for(item in BottomNavigationItem.entries){
-            Image(painter = painterResource(item.icon), contentDescription = null,
+    ) {
+        for (item in BottomNavigationItem.entries) {
+            Image(
+                painter = painterResource(item.icon), contentDescription = null,
                 modifier = Modifier
                     .padding(4.dp)
                     .weight(1f)
@@ -43,7 +48,7 @@ fun BottomNavigationMenu(selectedItem: BottomNavigationItem, navController: NavC
                     .clickable {
                         navigateTo(navController, item.navDestination.route)
                     },
-                colorFilter = if(item == selectedItem) ColorFilter.tint(Color.Black)
+                colorFilter = if (item == selectedItem) ColorFilter.tint(Color.Black)
                 else ColorFilter.tint(Color.Gray)
             )
         }

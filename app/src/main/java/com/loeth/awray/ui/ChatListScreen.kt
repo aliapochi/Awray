@@ -3,6 +3,7 @@ package com.loeth.awray.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +21,8 @@ fun ChatListScreen(navController: NavController){
         Text(text = "Chat List Screen")
         BottomNavigationMenu(
             selectedItem = BottomNavigationItem.CHATLIST,
-            navController = navController
+            navController = navController,
+            modifier = Modifier.navigationBarsPadding()
         )
     }
 }

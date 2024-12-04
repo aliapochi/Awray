@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -84,7 +85,9 @@ fun SwipeCards(navController: NavController) {
                     .padding(24.dp)
                     .fillMaxSize()
                     .aspectRatio(1f)
-                    .align(Alignment.Center)) {
+                    .align(Alignment.Center)
+            )
+            {
                 states.forEach { (matchProfile, state) ->
                     if (state.swipedDirection == null) {
                         ProfileCard(
@@ -149,7 +152,9 @@ fun SwipeCards(navController: NavController) {
         }
         BottomNavigationMenu(
             selectedItem = BottomNavigationItem.SWIPE,
-            navController = navController
+            navController = navController,
+            modifier = Modifier.navigationBarsPadding()
+
         )
     }
 }
