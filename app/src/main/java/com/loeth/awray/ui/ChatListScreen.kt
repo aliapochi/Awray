@@ -22,7 +22,6 @@ fun ChatListScreen(navController: NavController){
         BottomNavigationMenu(
             selectedItem = BottomNavigationItem.CHATLIST,
             navController = navController,
-            modifier = Modifier.navigationBarsPadding()
         )
     }
 }

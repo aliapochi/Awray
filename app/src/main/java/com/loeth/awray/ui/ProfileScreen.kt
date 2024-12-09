@@ -1,5 +1,8 @@
 package com.loeth.awray.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,15 +53,15 @@ fun ProfileScreen(navController: NavController, viewModel: AwrayViewModel) {
         CommonProgressSpinner()
     else {
         val userData = viewModel.userData.value
+        val g = if (userData?.gender.isNullOrEmpty()) "MALE"
+        else userData!!.gender!!.uppercase()
+        val gPref = if (userData?.genderPreference.isNullOrEmpty()) "FEMALE"
+        else userData!!.genderPreference!!.uppercase()
         var name by rememberSaveable { mutableStateOf(userData?.name ?: "") }
-        var userName by rememberSaveable { mutableStateOf(userData?.username ?: "") }
+        var username by rememberSaveable { mutableStateOf(userData?.username ?: "") }
         var bio by rememberSaveable { mutableStateOf(userData?.bio ?: "") }
-        var gender by rememberSaveable {
-            mutableStateOf(Gender.valueOf(userData?.gender?.uppercase() ?: "MALE"))
-        }
-        var genderPreference by rememberSaveable {
-            mutableStateOf(Gender.valueOf(userData?.genderPreference?.uppercase() ?: "FEMALE"))
-        }
+        var gender by rememberSaveable { mutableStateOf(Gender.valueOf(g)) }
+        var genderPreference by rememberSaveable { mutableStateOf(Gender.valueOf(gPref)) }
 
         val scrollState = rememberScrollState()
 
@@ -70,24 +73,23 @@ fun ProfileScreen(navController: NavController, viewModel: AwrayViewModel) {
                     .padding(8.dp),
                 viewModel = viewModel,
                 name = name,
-                username = userName,
+                username = username,
                 bio = bio,
                 gender = gender,
                 genderPreference = genderPreference,
-                onNameChanged = { name = it },
-                onUserNameChanged = { userName = it },
-                onBioChanged = { bio = it },
-                onGenderChanged = { gender = it },
-                onGenderPreferenceChanged = { genderPreference = it },
+                onNameChange = { name = it },
+                onUsernameChange = { username = it },
+                onBioChange = { bio = it },
+                onGenderChange = { gender = it },
+                onGenderPreferenceChange = { genderPreference = it },
                 onSave = {
-                    viewModel.updateProfileData(name, userName, bio, gender, genderPreference)
+                    viewModel.updateProfileData(name, username, bio, gender, genderPreference)
                 },
                 onBack = { navigateTo(navController, DestinationScreen.Swipe.route) },
                 onLogout = {
                     viewModel.onLogout()
                     navigateTo(navController, DestinationScreen.Login.route)
                 }
-
             )
 
             BottomNavigationMenu(
@@ -96,8 +98,8 @@ fun ProfileScreen(navController: NavController, viewModel: AwrayViewModel) {
             )
         }
     }
-
 }
+
 
 @Composable
 fun ProfileContent(
@@ -108,18 +110,18 @@ fun ProfileContent(
     bio: String,
     gender: Gender,
     genderPreference: Gender,
-    onNameChanged: (String) -> Unit,
-    onUserNameChanged: (String) -> Unit,
-    onBioChanged: (String) -> Unit,
-    onGenderChanged: (Gender) -> Unit,
-    onGenderPreferenceChanged: (Gender) -> Unit,
+    onNameChange: (String) -> Unit,
+    onUsernameChange: (String) -> Unit,
+    onBioChange: (String) -> Unit,
+    onGenderChange: (Gender) -> Unit,
+    onGenderPreferenceChange: (Gender) -> Unit,
     onSave: () -> Unit,
     onBack: () -> Unit,
     onLogout: () -> Unit
 ) {
     val imageUrl = viewModel.userData.value?.imageUrl
 
-    Column() {
+    Column(modifier = modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -141,23 +143,17 @@ fun ProfileContent(
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
-        )
-        {
+        ) {
             Text(text = "Name", modifier = Modifier.width(100.dp))
             TextField(
                 value = name,
-                onValueChange = onNameChanged,
-                modifier = Modifier.fillMaxWidth(),
+                onValueChange = onNameChange,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    disabledContainerColor = Color.Transparent
                 )
             )
-
-
         }
 
         Row(
@@ -165,22 +161,17 @@ fun ProfileContent(
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
-        )
-        {
+        ) {
             Text(text = "Username", modifier = Modifier.width(100.dp))
             TextField(
                 value = username,
-                onValueChange = onUserNameChanged,
-                modifier = Modifier.fillMaxWidth(),
+                onValueChange = onUsernameChange,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    disabledContainerColor = Color.Transparent
                 )
             )
-
         }
 
         Row(
@@ -188,25 +179,20 @@ fun ProfileContent(
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
-        )
-        {
+        ) {
             Text(text = "Bio", modifier = Modifier.width(100.dp))
             TextField(
                 value = bio,
-                onValueChange = onBioChanged,
+                onValueChange = onBioChange,
                 modifier = Modifier
                     .height(150.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
+                    disabledContainerColor = Color.Transparent
                 ),
                 singleLine = false
-
             )
-
         }
 
         Row(
@@ -214,10 +200,9 @@ fun ProfileContent(
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.Top
-        )
-        {
+        ) {
             Text(
-                text = "I am interested in:", modifier = Modifier
+                text = "I am a:", modifier = Modifier
                     .width(100.dp)
                     .padding(8.dp)
             )
@@ -225,39 +210,36 @@ fun ProfileContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = gender == Gender.MALE,
-                        onClick = { onGenderChanged(Gender.MALE) }
-                    )
+                        onClick = { onGenderChange(Gender.MALE) })
                     Text(
                         text = "Man",
                         modifier = Modifier
                             .padding(4.dp)
-                            .clickable { onGenderChanged(Gender.MALE) })
-
+                            .clickable { onGenderChange(Gender.MALE) })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = gender == Gender.FEMALE,
-                        onClick = { onGenderChanged(Gender.FEMALE) }
-                    )
+                        onClick = { onGenderChange(Gender.FEMALE) })
                     Text(
                         text = "Woman",
                         modifier = Modifier
                             .padding(4.dp)
-                            .clickable { onGenderChanged(Gender.FEMALE) })
-
+                            .clickable { onGenderChange(Gender.FEMALE) })
                 }
             }
         }
+
         CommonDivider()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.Top
-        )
-        {
+        ) {
             Text(
-                text = "I am interested in:", modifier = Modifier
+                text = "Looking for:", modifier = Modifier
                     .width(100.dp)
                     .padding(8.dp)
             )
@@ -265,43 +247,38 @@ fun ProfileContent(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = genderPreference == Gender.MALE,
-                        onClick = { onGenderPreferenceChanged(Gender.MALE) }
-                    )
+                        onClick = { onGenderPreferenceChange(Gender.MALE) })
                     Text(
                         text = "Men",
                         modifier = Modifier
                             .padding(4.dp)
-                            .clickable { onGenderPreferenceChanged(Gender.MALE) })
-
+                            .clickable { onGenderPreferenceChange(Gender.MALE) })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = genderPreference == Gender.FEMALE,
-                        onClick = { onGenderPreferenceChanged(Gender.FEMALE) }
-                    )
+                        onClick = { onGenderPreferenceChange(Gender.FEMALE) })
                     Text(
                         text = "Women",
                         modifier = Modifier
                             .padding(4.dp)
-                            .clickable { onGenderPreferenceChanged(Gender.FEMALE) })
-
+                            .clickable { onGenderPreferenceChange(Gender.FEMALE) })
                 }
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(
                         selected = genderPreference == Gender.ANY,
-                        onClick = { onGenderPreferenceChanged(Gender.ANY) }
-                    )
+                        onClick = { onGenderPreferenceChange(Gender.ANY) })
                     Text(
-                        text = "Women",
+                        text = "Any",
                         modifier = Modifier
                             .padding(4.dp)
-                            .clickable { onGenderPreferenceChanged(Gender.ANY) })
-
+                            .clickable { onGenderPreferenceChange(Gender.ANY) })
                 }
             }
         }
+
         CommonDivider()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -314,17 +291,24 @@ fun ProfileContent(
     }
 }
 
-
 @Composable
-fun ProfileImage(imageUrl: String? = null, viewModel: AwrayViewModel) {
+fun ProfileImage(imageUrl: String?, viewModel: AwrayViewModel) {
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri: Uri? ->
+        uri?.let { viewModel.uploadProfileImage(uri) }
+    }
+
     Box(modifier = Modifier.height(IntrinsicSize.Min)) {
         Column(modifier = Modifier
             .padding(8.dp)
             .fillMaxWidth()
             .clickable {
-                //Select an Image
+                launcher.launch("image/*")
             },
-            horizontalAlignment = Alignment.CenterHorizontally) {
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Card(shape = CircleShape, modifier = Modifier
                 .padding(8.dp)
                 .size(100.dp)) {
@@ -334,7 +318,7 @@ fun ProfileImage(imageUrl: String? = null, viewModel: AwrayViewModel) {
         }
 
         val isLoading = viewModel.inProgress.value
-        if(isLoading)
+        if (isLoading)
             CommonProgressSpinner()
     }
 }

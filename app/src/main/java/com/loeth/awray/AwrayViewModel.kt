@@ -1,36 +1,43 @@
 package com.loeth.awray
 
+import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObject
 import com.google.firebase.storage.FirebaseStorage
-import com.loeth.awray.data.COLLECTION_NAME
+import com.loeth.awray.data.COLLECTION_USER
 import com.loeth.awray.data.Event
 import com.loeth.awray.data.UserData
 import com.loeth.awray.ui.Gender
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
 class AwrayViewModel @Inject constructor(
-    val auth: FirebaseAuth,
-    val db: FirebaseFirestore,
-    val storage: FirebaseStorage
+    private val auth: FirebaseAuth,
+    private val db: FirebaseFirestore,
+    private val storage: FirebaseStorage
 ) : ViewModel() {
+
     val inProgress = mutableStateOf(false)
     val popUpNotification = mutableStateOf<Event<String>?>(null)
     val signedIn = mutableStateOf(false)
     val userData = mutableStateOf<UserData?>(null)
 
+    val matchProfiles = mutableStateOf<List<UserData>>(listOf())
+    val inProgressProfiles = mutableStateOf(false)
+
     init {
-        auth.signOut()
+        //auth.signOut()
         val currentUser = auth.currentUser
         signedIn.value = currentUser != null
         currentUser?.uid?.let { uid ->
-            getUserDate(uid)
+            getUserData(uid)
         }
     }
 
@@ -40,7 +47,7 @@ class AwrayViewModel @Inject constructor(
             return
         }
         inProgress.value = true
-        db.collection(COLLECTION_NAME).whereEqualTo("username", username)
+        db.collection(COLLECTION_USER).whereEqualTo("username", username)
             .get()
             .addOnSuccessListener {
                 if (it.isEmpty)
@@ -74,7 +81,7 @@ class AwrayViewModel @Inject constructor(
                     signedIn.value = true
                     inProgress.value = false
                     auth.currentUser?.uid?.let { uid ->
-                        getUserDate(uid)
+                        getUserData(uid)
                     }
                 } else
                     handleException(task.exception, "Login failed")
@@ -105,21 +112,22 @@ class AwrayViewModel @Inject constructor(
         )
         uid?.let { uid ->
             inProgress.value = true
-            db.collection(COLLECTION_NAME).document(uid).get()
+            db.collection(COLLECTION_USER).document(uid).get()
                 .addOnSuccessListener {
                     if (it.exists()) {
                         it.reference.update(userData.toMap())
                             .addOnSuccessListener {
                                 this.userData.value = userData
                                 inProgress.value = false
+                                populateCards()
                             }
                             .addOnFailureListener {
                                 handleException(it, "Cannot update profile")
                             }
                     } else {
-                        db.collection(COLLECTION_NAME).document(uid).set(userData)
+                        db.collection(COLLECTION_USER).document(uid).set(userData)
                         inProgress.value = false
-                        getUserDate(uid)
+                        getUserData(uid)
 
                     }
                 }
@@ -131,9 +139,9 @@ class AwrayViewModel @Inject constructor(
 
     }
 
-    private fun getUserDate(uid: String) {
+    private fun getUserData(uid: String) {
         inProgress.value = true
-        db.collection(COLLECTION_NAME).document(uid)
+        db.collection(COLLECTION_USER).document(uid)
             .addSnapshotListener { value, error ->
                 if (error != null)
                     handleException(error, "Cannot fetch user data")
@@ -141,6 +149,7 @@ class AwrayViewModel @Inject constructor(
                     val user = value.toObject<UserData>()
                     userData.value = user
                     inProgress.value = false
+                    populateCards()
                 }
             }
     }
@@ -168,6 +177,33 @@ class AwrayViewModel @Inject constructor(
         )
     }
 
+    fun uploadImage(uri: Uri, onSuccess: (Uri) -> Unit) {
+        inProgress.value = true
+
+        val storageRef = storage.reference
+        val uuid = UUID.randomUUID()
+        val imageRef = storageRef.child("images/$uuid")
+        val uploadTask = imageRef.putFile(uri)
+
+        uploadTask
+            .addOnSuccessListener {
+                val result = it.metadata?.reference?.downloadUrl
+                result?.addOnSuccessListener(onSuccess)
+            }
+            .addOnFailureListener {
+                handleException(it)
+                inProgress.value = false
+
+            }
+    }
+
+    fun uploadProfileImage(uri: Uri) {
+        uploadImage(uri) {
+            val imageUrl = it.toString()
+            createOrUpdateProfile(imageUrl = imageUrl)
+        }
+    }
+
     private fun handleException(exception: Exception? = null, customMessage: String = "") {
         Log.e("Awray", "Awray Exception", exception)
         exception?.printStackTrace()
@@ -176,4 +212,57 @@ class AwrayViewModel @Inject constructor(
         popUpNotification.value = Event(message)
         inProgress.value = false
     }
+
+    private fun populateCards() {
+        inProgressProfiles.value = true
+
+        val g = if (userData.value?.gender.isNullOrEmpty()) "ANY"
+        else userData.value!!.gender!!.uppercase()
+        val gPref =
+            if (userData.value?.genderPreference.isNullOrEmpty()) "ANY"
+            else userData.value!!.genderPreference!!.uppercase()
+
+        val userGender = Gender.valueOf(g)
+
+        // Fetch base query without applying '!=' filters
+        val baseQuery = db.collection(COLLECTION_USER)
+
+        val cardsQuery = when (Gender.valueOf(gPref)) {
+            Gender.MALE -> baseQuery.whereEqualTo("gender", Gender.FEMALE)
+            Gender.FEMALE -> baseQuery.whereEqualTo("gender", Gender.MALE)
+            Gender.ANY -> baseQuery
+        }
+
+        cardsQuery.get()
+            .addOnSuccessListener { documents ->
+                val potentials = mutableListOf<UserData>()
+
+                documents.forEach { document ->
+                    document.toObject<UserData>().let { potential ->
+                        // Convert string genderPreference to Gender enum
+                        val genderPref = try {
+                            Gender.valueOf(potential.genderPreference?.uppercase() ?: "")
+                        } catch (e: IllegalArgumentException) {
+                            null
+                        }
+
+                        // Apply filters locally
+                        if (potential.userId != userData.value?.userId &&
+                            (genderPref == userGender || genderPref == Gender.ANY)
+                        ) {
+                            potentials.add(potential)
+                        }
+                    }
+                }
+
+                matchProfiles.value = potentials
+                inProgressProfiles.value = false
+            }
+            .addOnFailureListener { error ->
+                inProgressProfiles.value = false
+                handleException(error)
+            }
+
+    }
 }
+

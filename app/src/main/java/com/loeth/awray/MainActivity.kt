@@ -18,7 +18,7 @@ import com.loeth.awray.ui.LoginScreen
 import com.loeth.awray.ui.ProfileScreen
 import com.loeth.awray.ui.SignupScreen
 import com.loeth.awray.ui.SingleChatScreen
-import com.loeth.awray.ui.SwipeCards
+import com.loeth.awray.ui.SwipeScreen
 import com.loeth.awray.ui.theme.AwrayTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -75,8 +75,10 @@ fun SwipeAppNavigation() {
             SingleChatScreen(chatId = "123")
         }
         composable(DestinationScreen.Swipe.route) {
-            SwipeCards(navController)
+            SwipeScreen(navController, viewModel)
         }
     }
 }
+
+
 
