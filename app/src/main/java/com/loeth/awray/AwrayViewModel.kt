@@ -215,6 +215,7 @@ class AwrayViewModel @Inject constructor(
 
     private fun populateCards() {
         inProgressProfiles.value = true
+        Log.d("populateCards", "Started populating cards")
 
         val g = if (userData.value?.gender.isNullOrEmpty()) "ANY"
         else userData.value!!.gender!!.uppercase()
@@ -222,47 +223,69 @@ class AwrayViewModel @Inject constructor(
             if (userData.value?.genderPreference.isNullOrEmpty()) "ANY"
             else userData.value!!.genderPreference!!.uppercase()
 
+        Log.d("populateCards", "User gender: $g, Gender preference: $gPref")
+
         val userGender = Gender.valueOf(g)
 
         // Fetch base query without applying '!=' filters
         val baseQuery = db.collection(COLLECTION_USER)
 
+        Log.d("populateCards", "Base query prepared")
+
         val cardsQuery = when (Gender.valueOf(gPref)) {
-            Gender.MALE -> baseQuery.whereEqualTo("gender", Gender.FEMALE)
-            Gender.FEMALE -> baseQuery.whereEqualTo("gender", Gender.MALE)
+            Gender.MALE -> baseQuery.whereEqualTo("gender", Gender.MALE)
+            Gender.FEMALE -> baseQuery.whereEqualTo("gender", Gender.FEMALE)
             Gender.ANY -> baseQuery
         }
+
+        Log.d("populateCards", "Cards query created for gender: $gPref")
 
         cardsQuery.get()
             .addOnSuccessListener { documents ->
                 val potentials = mutableListOf<UserData>()
 
                 documents.forEach { document ->
+                    Log.d("populateCards", "Documents fetched: ${documents.size()}")
+
                     document.toObject<UserData>().let { potential ->
+                        Log.d("populateCards", "Mapped potential user: $potential")
+
                         // Convert string genderPreference to Gender enum
                         val genderPref = try {
-                            Gender.valueOf(potential.genderPreference?.uppercase() ?: "")
+                            Gender.valueOf(potential.genderPreference?.uppercase() ?: "ANY")
                         } catch (e: IllegalArgumentException) {
-                            null
+                            Gender.ANY
                         }
 
                         // Apply filters locally
-                        if (potential.userId != userData.value?.userId &&
-                            (genderPref == userGender || genderPref == Gender.ANY)
-                        ) {
-                            potentials.add(potential)
+                        if (potential.userId != userData.value?.userId) {
+                            if ((genderPref == userGender || genderPref == Gender.ANY) &&
+                                (potential.gender == gPref || gPref == "ANY")
+                            ) {
+                                potentials.add(potential)
+                                Log.d("populateCards", "Added user: ${potential.userId}")
+                            } else {
+                                Log.d(
+                                    "populateCards",
+                                    "User skipped: ${potential.userId} - genderPref: $genderPref, userGender: $userGender, potentialGender: ${potential.gender}, userPreference: $gPref"
+                                )
+                            }
                         }
+
                     }
                 }
+
+                Log.d("populateCards", "Total potentials added: ${potentials.size}")
 
                 matchProfiles.value = potentials
                 inProgressProfiles.value = false
             }
             .addOnFailureListener { error ->
+                Log.e("populateCards", "Error getting documents: ", error)
                 inProgressProfiles.value = false
                 handleException(error)
             }
-
     }
+
 }
 
