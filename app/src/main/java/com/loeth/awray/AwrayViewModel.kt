@@ -5,11 +5,14 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.Filter
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObject
 import com.google.firebase.storage.FirebaseStorage
+import com.loeth.awray.data.COLLECTION_CHAT
 import com.loeth.awray.data.COLLECTION_USER
+import com.loeth.awray.data.ChatData
+import com.loeth.awray.data.ChatUser
 import com.loeth.awray.data.Event
 import com.loeth.awray.data.UserData
 import com.loeth.awray.ui.Gender
@@ -286,6 +289,60 @@ class AwrayViewModel @Inject constructor(
                 handleException(error)
             }
     }
+
+    fun onDislike(selectedUser: UserData) {
+        //db.collection(COLLECTION_USER).document(userData.userId!!).update("swipedRight", true)
+        db.collection(COLLECTION_USER).document(userData.value?.userId ?: "")
+            .update("swipedRight", FieldValue.arrayUnion(selectedUser.userId))
+    }
+
+    fun onLike(selectedUser: UserData) {
+        //val otherUser = matchProfiles.value.find { it.userId == selectedUser.userId }
+        val reciprocalMatch = selectedUser.swipesRight.contains(userData.value?.userId)
+        if (!reciprocalMatch) {
+            db.collection(COLLECTION_USER).document(userData.value?.userId ?: "")
+                .update("swipesRight", FieldValue.arrayUnion(selectedUser.userId))
+        } else {
+            //db.collection(COLLECTION_USER).document(userData.userId!!).update("swipedRight", true)
+            popUpNotification.value = Event("You have a match!")
+            //db.collection(COLLECTION_USER).document(selectedUser.userId!!).update("swipedRight", true)
+
+            // Updating the swiped user's document
+            db.collection(COLLECTION_USER).document(selectedUser.userId ?: "")
+                .update("swipesRight", FieldValue.arrayRemove(userData.value?.userId)) // Remove current user's ID from 'swipesRight'
+            db.collection(COLLECTION_USER).document(selectedUser.userId ?: "")
+                .update("matches", FieldValue.arrayUnion(userData.value?.userId)) // Add current user's ID to 'matches'
+
+// Updating the current user's document
+            db.collection(COLLECTION_USER).document(userData.value?.userId ?: "")
+                .update("matches", FieldValue.arrayUnion(selectedUser.userId)) // Add swiped user's ID to 'matches'
+
+
+            val chatKey = db.collection(COLLECTION_CHAT).document().id
+            val chat = ChatData(
+                chatKey,
+                ChatUser(
+                    userData.value?.userId,
+                    if(userData.value?.name.isNullOrEmpty()) userData.value?.username
+                    else userData.value?.name,
+                    userData.value?.imageUrl
+                ),
+                ChatUser(
+                    selectedUser.userId,
+                    if(selectedUser.name.isNullOrEmpty()) selectedUser.username
+                        else selectedUser.name,
+                    selectedUser.imageUrl
+                )
+            )
+            db.collection(COLLECTION_CHAT).document(chatKey).set(chat)
+        }
+
+    }
+
+    fun removeProfile(profile: UserData) {
+        matchProfiles.value = matchProfiles.value.filterNot { it.userId == profile.userId }
+    }
+
 
 }
 

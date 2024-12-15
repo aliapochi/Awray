@@ -26,3 +26,16 @@ data class UserData(
         "matches" to matches
     )
 }
+
+data class ChatData(
+    var chatId: String? = "",
+    var user1: ChatUser = ChatUser(),
+    var user2: ChatUser = ChatUser()
+)
+
+data class ChatUser(
+    var userId: String? = "",
+    var name: String? = "",
+    var imageUrl: String? = ""
+
+)

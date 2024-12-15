@@ -1,7 +1,6 @@
 package com.loeth.awray.ui
 
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -21,40 +19,29 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Card
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.loeth.awray.AwrayViewModel
 import com.loeth.awray.CommonImage
 import com.loeth.awray.CommonProgressSpinner
 import com.loeth.awray.data.UserData
 import com.loeth.awray.swipecards.Direction
-import com.loeth.awray.swipecards.MatchProfile
-import com.loeth.awray.swipecards.profiles
 import com.loeth.awray.swipecards.rememberSwipeableCardState
 import com.loeth.awray.swipecards.swipableCard
 import kotlinx.coroutines.launch
@@ -103,10 +90,11 @@ fun SwipeScreen(navController: NavController, viewModel: AwrayViewModel) {
                             if (state.swipedDirection == Direction.Left ||
                                 state.swipedDirection == Direction.Down
                             ) {
-                                //viewModel.onDislike(matchProfile)
+                                viewModel.onDislike(matchProfile)
                             } else {
-                                //viewModel.onLike(matchProfile)
+                                viewModel.onLike(matchProfile)
                             }
+                            viewModel.removeProfile(matchProfile)
                         }
                     }
                 }
