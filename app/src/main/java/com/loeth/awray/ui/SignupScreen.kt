@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -23,11 +24,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.loeth.awray.AwrayViewModel
+import com.loeth.awray.CheckSignedIn
 import com.loeth.awray.CommonProgressSpinner
 import com.loeth.awray.DestinationScreen
 import com.loeth.awray.R
@@ -35,6 +38,9 @@ import com.loeth.awray.navigateTo
 
 @Composable
 fun SignupScreen(navController: NavController, viewModel: AwrayViewModel) {
+
+    CheckSignedIn(navController = navController, viewModel = viewModel)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -49,10 +55,10 @@ fun SignupScreen(navController: NavController, viewModel: AwrayViewModel) {
             val focus = LocalFocusManager.current
 
             Image(
-                painter = painterResource(R.drawable.fire),
+                painter = painterResource(R.drawable.awray_logo),
                 contentDescription = null,
                 modifier = Modifier
-                    .width(200.dp)
+                    .size(250.dp)
                     .padding(top = 16.dp)
                     .padding(8.dp)
             )
@@ -79,17 +85,26 @@ fun SignupScreen(navController: NavController, viewModel: AwrayViewModel) {
                 value = passwordState.value,
                 onValueChange = { passwordState.value = it },
                 modifier = Modifier.padding(8.dp),
-                label = { Text(text = "Password") })
+                label = { Text(text = "Password") },
+                visualTransformation = PasswordVisualTransformation()
+            )
 
             Button(
-                onClick = { focus.clearFocus(force = true) },
+                onClick = {
+                    focus.clearFocus(force = true)
+                    viewModel.onSignUp(
+                        usernameState.value.text,
+                        emailState.value.text,
+                        passwordState.value.text
+                    )
+                },
                 modifier = Modifier.padding(8.dp)
             ) {
                 Text(text = "SIGN UP")
             }
 
             Text(
-                text = "Already have an account?, Login here",
+                text = "Already have an account? Login here",
                 color = Color.Blue,
                 modifier = Modifier
                     .padding(8.dp)
@@ -98,7 +113,7 @@ fun SignupScreen(navController: NavController, viewModel: AwrayViewModel) {
                     })
         }
         val isLoading = viewModel.inProgress.value
-        if(isLoading)
+        if (isLoading)
             CommonProgressSpinner()
     }
 

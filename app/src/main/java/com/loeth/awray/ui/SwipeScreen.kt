@@ -1,13 +1,13 @@
 package com.loeth.awray.ui
 
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,138 +19,119 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Card
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.loeth.awray.AwrayViewModel
+import com.loeth.awray.CommonImage
+import com.loeth.awray.CommonProgressSpinner
+import com.loeth.awray.data.UserData
 import com.loeth.awray.swipecards.Direction
-import com.loeth.awray.swipecards.MatchProfile
-import com.loeth.awray.swipecards.profiles
 import com.loeth.awray.swipecards.rememberSwipeableCardState
 import com.loeth.awray.swipecards.swipableCard
 import kotlinx.coroutines.launch
 
 @Composable
-fun SwipeCards(navController: NavController) {
-    TransparentSystemBars()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xfff68084),
-                        Color(0xffa6c0fe),
-                    )
-                )
-            )
-//                        .systemBarsPadding()
-    ) {
-        Box(modifier = Modifier.weight(1f)) {
-            val states = profiles.reversed()
-                .map { it to rememberSwipeableCardState() }
-            var hint by remember {
-                mutableStateOf("Swipe a card or press a button below")
-            }
+fun SwipeScreen(navController: NavController, viewModel: AwrayViewModel) {
+    val inProgress = viewModel.inProgressProfiles.value
+    if (inProgress)
+        CommonProgressSpinner()
+    else {
+        val profiles = viewModel.matchProfiles.value
+        Column(
+            verticalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Spacer
+            Spacer(modifier = Modifier.height(1.dp))
 
-            Hint(hint)
-
-            val scope = rememberCoroutineScope()
+            // Cards
+            val states = profiles.map { it to rememberSwipeableCardState() }
             Box(
-                Modifier
+                modifier = Modifier
                     .padding(24.dp)
-                    .fillMaxSize()
                     .aspectRatio(1f)
-                    .align(Alignment.Center)) {
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(text = "No more profiles available")
+                }
                 states.forEach { (matchProfile, state) ->
-                    if (state.swipedDirection == null) {
-                        ProfileCard(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .swipableCard(
-                                    state = state,
-                                    blockedDirections = listOf(Direction.Down),
-                                    onSwiped = {
-                                        // swipes are handled by the LaunchedEffect
-                                        // so that we track button clicks & swipes
-                                        // from the same place
-                                    },
-                                    onSwipeCancel = {
-                                        Log.d("Swipeable-Card", "Cancelled swipe")
-                                        hint = "You canceled the swipe"
-                                    }
-                                ),
-                            matchProfile = matchProfile
-                        )
-                    }
+                    ProfileCard(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .swipableCard(
+                                state = state,
+                                blockedDirections = listOf(Direction.Down),
+                                onSwiped = {},
+                                onSwipeCancel = { Log.d("Swipeable card", "Cancelled swipe") }),
+                        matchProfile = matchProfile
+                    )
                     LaunchedEffect(matchProfile, state.swipedDirection) {
                         if (state.swipedDirection != null) {
-                            hint = "You swiped ${stringFrom(state.swipedDirection!!)}"
+                            if (state.swipedDirection == Direction.Left ||
+                                state.swipedDirection == Direction.Down
+                            ) {
+                                viewModel.onDislike(matchProfile)
+                            } else {
+                                viewModel.onLike(matchProfile)
+                            }
+                            viewModel.removeProfile(matchProfile)
                         }
                     }
                 }
             }
+
+            // Buttons
+            val scope = rememberCoroutineScope()
             Row(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 24.dp, vertical = 32.dp)
+                modifier = Modifier
+                    .padding(24.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                CircleButton(
-                    onClick = {
-                        scope.launch {
-                            val last = states.reversed()
-                                .firstOrNull {
-                                    it.second.offset.value == Offset(0f, 0f)
-                                }?.second
-                            last?.swipe(Direction.Left)
-                        }
-                    },
-                    icon = Icons.Rounded.Close
-                )
-                CircleButton(
-                    onClick = {
-                        scope.launch {
-                            val last = states.reversed()
-                                .firstOrNull {
-                                    it.second.offset.value == Offset(0f, 0f)
-                                }?.second
-
-                            last?.swipe(Direction.Right)
-                        }
-                    },
-                    icon = Icons.Rounded.Favorite
-                )
+                CircleButton(onClick = {
+                    scope.launch {
+                        val last = states.reversed().firstOrNull {
+                            it.second.offset.value == Offset(0f, 0f)
+                        }?.second
+                        last?.swipe(Direction.Left)
+                    }
+                }, icon = Icons.Rounded.Close)
+                CircleButton(onClick = {
+                    scope.launch {
+                        val last = states.reversed().firstOrNull {
+                            it.second.offset.value == Offset(0f, 0f)
+                        }?.second
+                        last?.swipe(Direction.Right)
+                    }
+                }, icon = Icons.Rounded.Favorite)
             }
+
+            // Bottom nav bar
+            BottomNavigationMenu(
+                selectedItem = BottomNavigationItem.SWIPE,
+                navController = navController
+            )
         }
-        BottomNavigationMenu(
-            selectedItem = BottomNavigationItem.SWIPE,
-            navController = navController
-        )
     }
 }
 
@@ -167,73 +148,32 @@ private fun CircleButton(
             .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
         onClick = onClick
     ) {
-        Icon(icon, null,
-            tint = MaterialTheme.colorScheme.onPrimary)
+        Icon(
+            icon, null,
+            tint = MaterialTheme.colorScheme.onPrimary
+        )
     }
 }
 
 @Composable
 private fun ProfileCard(
     modifier: Modifier,
-    matchProfile: MatchProfile,
+    matchProfile: UserData,
 ) {
     Card(modifier) {
         Box {
-            Image(contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                painter = painterResource(matchProfile.drawableResId),
-                contentDescription = null)
+            CommonImage(data = matchProfile.imageUrl, modifier = Modifier.fillMaxSize())
             Scrim(Modifier.align(Alignment.BottomCenter))
             Column(Modifier.align(Alignment.BottomStart)) {
-                Text(text = matchProfile.name,
+                Text(
+                    text = matchProfile.name ?: matchProfile.username ?: "",
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(10.dp))
+                    modifier = Modifier.padding(10.dp)
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun Hint(text: String) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .padding(horizontal = 24.dp, vertical = 32.dp)
-            .fillMaxWidth()
-    ) {
-        Text(
-            text = text,
-            color = MaterialTheme.colorScheme.onPrimary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 22.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-private fun TransparentSystemBars() {
-    val systemUiController = rememberSystemUiController()
-    val useDarkIcons = false
-
-    DisposableEffect(systemUiController, useDarkIcons) {
-        systemUiController.setSystemBarsColor(
-            color = Color.Transparent,
-            darkIcons = useDarkIcons,
-            isNavigationBarContrastEnforced = false
-        )
-        onDispose {}
-    }
-}
-
-private fun stringFrom(direction: Direction): String {
-    return when (direction) {
-        Direction.Left -> "Left 👈"
-        Direction.Right -> "Right 👉"
-        Direction.Up -> "Up 👆"
-        Direction.Down -> "Down 👇"
     }
 }
 
@@ -244,5 +184,6 @@ fun Scrim(modifier: Modifier = Modifier) {
         modifier
             .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black)))
             .height(180.dp)
-            .fillMaxWidth())
+            .fillMaxWidth()
+    )
 }
