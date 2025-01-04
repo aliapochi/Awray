@@ -15,13 +15,13 @@ espressoCore = "3.6.1"
 kotlinxCoroutinesAndroid = "1.9.0"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
-composeBom = "2024.11.00"
+composeBom = "2024.12.01"
 accompanist = "0.26.1-alpha"
-navigationCompose = "2.8.4"
+navigationCompose = "2.8.5"
 hilt = "2.49"
 googleServices = "4.4.2"
 firebaseStorage = "21.0.1"
-
+compose = "1.7.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -53,7 +53,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 accompanist = { group = "com.google.accompanist", name = "accompanist-systemuicontroller", version.ref = "accompanist"}
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 firebase-storage = { group = "com.google.firebase", name = "firebase-storage", version.ref = "firebaseStorage" }
-
+compose-material = { group = "androidx.compose.material", name = "material", version.ref = "compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -1,19 +1,24 @@
 package com.loeth.awray
 
+import android.icu.util.Calendar
 import android.net.Uri
 import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Filter
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.toObject
 import com.google.firebase.storage.FirebaseStorage
 import com.loeth.awray.data.COLLECTION_CHAT
+import com.loeth.awray.data.COLLECTION_MESSAGES
 import com.loeth.awray.data.COLLECTION_USER
 import com.loeth.awray.data.ChatData
 import com.loeth.awray.data.ChatUser
 import com.loeth.awray.data.Event
+import com.loeth.awray.data.Message
 import com.loeth.awray.data.UserData
 import com.loeth.awray.ui.Gender
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +39,13 @@ class AwrayViewModel @Inject constructor(
 
     val matchProfiles = mutableStateOf<List<UserData>>(listOf())
     val inProgressProfiles = mutableStateOf(false)
+
+    val chats = mutableStateOf<List<ChatData>>(listOf())
+    val inProgressChats = mutableStateOf(false)
+
+    val inProgressChatMessages = mutableStateOf(false)
+    val chatMessages = mutableStateOf<List<Message>>(listOf())
+    var currentChatMessageListener: ListenerRegistration? = null
 
     init {
         //auth.signOut()
@@ -153,6 +165,7 @@ class AwrayViewModel @Inject constructor(
                     userData.value = user
                     inProgress.value = false
                     populateCards()
+                    populateChats()
                 }
             }
     }
@@ -309,13 +322,22 @@ class AwrayViewModel @Inject constructor(
 
             // Updating the swiped user's document
             db.collection(COLLECTION_USER).document(selectedUser.userId ?: "")
-                .update("swipesRight", FieldValue.arrayRemove(userData.value?.userId)) // Remove current user's ID from 'swipesRight'
+                .update(
+                    "swipesRight",
+                    FieldValue.arrayRemove(userData.value?.userId)
+                ) // Remove current user's ID from 'swipesRight'
             db.collection(COLLECTION_USER).document(selectedUser.userId ?: "")
-                .update("matches", FieldValue.arrayUnion(userData.value?.userId)) // Add current user's ID to 'matches'
+                .update(
+                    "matches",
+                    FieldValue.arrayUnion(userData.value?.userId)
+                ) // Add current user's ID to 'matches'
 
 // Updating the current user's document
             db.collection(COLLECTION_USER).document(userData.value?.userId ?: "")
-                .update("matches", FieldValue.arrayUnion(selectedUser.userId)) // Add swiped user's ID to 'matches'
+                .update(
+                    "matches",
+                    FieldValue.arrayUnion(selectedUser.userId)
+                ) // Add swiped user's ID to 'matches'
 
 
             val chatKey = db.collection(COLLECTION_CHAT).document().id
@@ -323,14 +345,14 @@ class AwrayViewModel @Inject constructor(
                 chatKey,
                 ChatUser(
                     userData.value?.userId,
-                    if(userData.value?.name.isNullOrEmpty()) userData.value?.username
+                    if (userData.value?.name.isNullOrEmpty()) userData.value?.username
                     else userData.value?.name,
                     userData.value?.imageUrl
                 ),
                 ChatUser(
                     selectedUser.userId,
-                    if(selectedUser.name.isNullOrEmpty()) selectedUser.username
-                        else selectedUser.name,
+                    if (selectedUser.name.isNullOrEmpty()) selectedUser.username
+                    else selectedUser.name,
                     selectedUser.imageUrl
                 )
             )
@@ -343,6 +365,52 @@ class AwrayViewModel @Inject constructor(
         matchProfiles.value = matchProfiles.value.filterNot { it.userId == profile.userId }
     }
 
+    private fun populateChats() {
+        inProgressChats.value = true
+        db.collection(COLLECTION_CHAT).where(
+            Filter.or(
+                Filter.equalTo("user1.userId", userData.value?.userId),
+                Filter.equalTo("user2.userId", userData.value?.userId)
+            )
+        )
+            .addSnapshotListener { value, error ->
+                if (error != null) {
+                    handleException(error)
+                }
+                if (value != null) {
+                    chats.value = value.documents.mapNotNull { it.toObject<ChatData>() }
 
+                    inProgressChats.value = false
+                }
+            }
+    }
+
+    fun onSendReply(chatId: String, message: String) {
+        val time = Calendar.getInstance().time.toString()
+        val message = Message(userData.value?.userId, message, time)
+        db.collection(COLLECTION_CHAT).document(chatId).collection(COLLECTION_MESSAGES).document()
+            .set(message)
+    }
+
+    fun populateChat(chatId: String) {
+        inProgressChatMessages.value = true
+        currentChatMessageListener = db.collection(COLLECTION_CHAT)
+            .document(chatId)
+            .collection(COLLECTION_MESSAGES)
+            .addSnapshotListener { value, error ->
+                if (error != null)
+                    handleException(error)
+                if (value != null)
+                    chatMessages.value = value.documents
+                        .mapNotNull { it.toObject<Message>() }
+                        .sortedBy { it.timeStamp }
+                inProgressChatMessages.value = false
+            }
+    }
+
+    fun depopulateChat() {
+        currentChatMessageListener = null
+        chatMessages.value = listOf()
+    }
 }
 

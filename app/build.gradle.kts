@@ -84,6 +84,8 @@ dependencies {
     implementation(platform(libs.firebase.bom.v2900))
     implementation(libs.firebase.analytics)
     kapt(libs.hilt.android.compiler)
+    implementation(libs.compose.material)
+
 
     implementation (libs.coil.compose)
 
